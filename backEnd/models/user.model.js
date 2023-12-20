@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const bcrypt=require('bcrypt')
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -19,19 +20,26 @@ const userSchema = new mongoose.Schema({
     },
     phone_number: {
         type: Number,
-        required: true
+        unique:true,
+        validate: {
+            validator: function(value) {
+              // Validate that the phone number is a valid number
+              // You can customize this validation logic based on your requirements
+              const phoneNumberRegex = /^\d{10}$/;
+              return phoneNumberRegex.test(value);
+            },
+            message: props => `${props.value} is not a valid phone number! Please enter a 10-digit number.`,
+          },
     },
     profile_Pics: {
         type: String,
         default: ""
     },
     password: {
-        type: String,
-        required: true
+        type: String
     },
     confirm_password: {
-        type: String,
-        required: true
+        type: String
     },
     createdAt: {
         type: Date,
@@ -42,7 +50,25 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now()
 
+    },
+    isAdmin:{
+        type:Boolean,
+        default:false
     }
+})
+
+userSchema.pre('save', async function (next) {
+    if (this.isModified('password')) {
+        try {
+            const hashPassword = await bcrypt.hash(this.password, 10)
+            this.password = hashPassword
+        }
+        catch (err) {
+            res.status(400).send(err.message)
+        }
+
+    }
+    next()
 })
 
 const User = mongoose.model('User', userSchema)
